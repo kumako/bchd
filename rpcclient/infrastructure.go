@@ -1096,6 +1096,10 @@ type ConnConfig struct {
 	// the wire in cleartext.
 	DisableTLS bool
 
+	// InsecureSkipVerify specifies whether to verify the server's TLS
+	// certificate.  This option should only be used for testing.
+	InsecureSkipVerify bool
+
 	// Certificates are the bytes for a PEM-encoded certificate chain used
 	// for the TLS connection.  It has no effect if the DisableTLS parameter
 	// is true.
@@ -1197,6 +1201,14 @@ func newHTTPClient(config *ConnConfig) (*http.Client, error) {
 			tlsConfig = &tls.Config{
 				RootCAs: pool,
 			}
+		}
+	}
+
+	if config.InsecureSkipVerify && tlsConfig != nil {
+		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			// Skip all certificate checks
+			return nil
 		}
 	}
 
