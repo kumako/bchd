@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 		server: nil,
 	}
 	go startLocalTestServer(proxy)
-	time.Sleep(1 * time.Second) // wait for HTTP server goroutine
+	time.Sleep(5 * time.Second) // wait for HTTP server goroutine
 
 	// connect the HTTP test client to address:port
 	httpAddr := *proxyAddr
@@ -229,7 +229,7 @@ func TestGetAddressUnspentOutputs(t *testing.T) {
 		t.Errorf("%s first output BlockHeight must be >= %d, received %d", method, minHeight, firstOutput.BlockHeight)
 	} else if firstOutput.Value < dustLimit {
 		t.Errorf("%s first output should have value >= dust limit, received %d", method, firstOutput.Value)
-	} else if outputs.TokenMetadata == nil || len(outputs.TokenMetadata) == 0 {
+	} else if len(outputs.TokenMetadata) == 0 {
 		t.Errorf("expected token metadata in %s", method)
 	} else {
 		t.Logf("Successfully passed %s test. Got %d ouputs", method, len(outputs.Outputs))
@@ -238,7 +238,7 @@ func TestGetAddressUnspentOutputs(t *testing.T) {
 
 func TestGetCashAddressUnspentOutputs(t *testing.T) {
 	method := "GetAddressUnspentOutputs"
-	address := "bitcoincash:qz7j7805n9yjdccpz00gq7d70k3h3nef9yj0pwpelz"
+	address := "bitcoincash:qzstwj2dksk0jch0w4lnzvph790a23rsg54uy4mwee"
 	res, err := httpClient.RequestRaw(method, D{
 		"address":                address,
 		"include_mempool":        false,
@@ -295,9 +295,9 @@ func TestGetAddressUnspentOutputsEmpty(t *testing.T) {
 
 func TestGetTokenBalance(t *testing.T) {
 	method := "GetAddressUnspentOutputs"
-	tokenID := "0be40e351ea9249b536ec3d1acd4e082e860ca02ec262777259ffe870d3b5cc3"
+	tokenID := "9872d22e12d815e76ebfe13ffb26385bc7c433cb8ac15d73c33ef7b71971fb5e"
 	tokenIDBytes, _ := hex.DecodeString(tokenID)
-	address := "simpleledger:qz7j7805n9yjdccpz00gq7d70k3h3nef9y75245epu"
+	address := "simpleledger:qrcp6avg7undm2he6cj9ushfn8g729g76yu09gk5nh"
 	res, err := httpClient.RequestRaw(method, D{
 		"address":                address,
 		"include_mempool":        true,

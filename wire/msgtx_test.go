@@ -35,7 +35,9 @@ func TestTx(t *testing.T) {
 	}
 
 	// Ensure max payload is expected value for latest protocol version.
-	wantPayload := fixedExcessiveBlockSize
+	// Using "* 4" is not the most optimal approach.
+	// A cleaner solution would involve modifying the behavior of wire.SetLimits.
+	wantPayload := fixedExcessiveBlockSize * 4
 	maxPayload := msg.MaxPayloadLength(pver)
 	if maxPayload != wantPayload {
 		t.Errorf("MaxPayloadLength: wrong max payload length for "+
@@ -91,7 +93,7 @@ func TestTx(t *testing.T) {
 		0xa6, // 65-byte signature
 		0xac, // OP_CHECKSIG
 	}
-	txOut := NewTxOut(txValue, pkScript)
+	txOut := NewTxOut(txValue, pkScript, TokenData{})
 	if txOut.Value != txValue {
 		t.Errorf("NewTxOut: wrong pk script - got %v, want %v",
 			txOut.Value, txValue)

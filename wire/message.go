@@ -24,11 +24,11 @@ const CommandSize = 12
 
 // ebs is the excessive block size, used to determine reasonable maximum message sizes.
 // 32MB is the current default value
-var ebs uint32 = 32000000
+var ebs uint32 = 32000000 * 4
 
 // SetLimits adjusts various message limits based on max block size configuration.
 func SetLimits(excessiveBlockSize uint32) {
-	ebs = excessiveBlockSize
+	ebs = excessiveBlockSize * 4 // TODO TODO set max?
 }
 
 // MaxMessagePayload returns is the maximum bytes a message can be regardless of other
@@ -74,6 +74,7 @@ const (
 	CmdCmpctBlock   = "cmpctblock"
 	CmdGetBlockTxns = "getblocktxn"
 	CmdBlockTxns    = "blocktxn"
+	CmdSendAddrV2   = "sendaddrv2"
 )
 
 // MessageEncoding represents the wire message encoding format to be used.
@@ -113,6 +114,9 @@ func makeEmptyMessage(command string) (Message, error) {
 
 	case CmdVerAck:
 		msg = &MsgVerAck{}
+
+	case CmdSendAddrV2:
+		msg = &MsgSendAddrV2{}
 
 	case CmdXVerAck:
 		msg = &MsgXVerAck{}

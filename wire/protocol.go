@@ -13,7 +13,7 @@ import (
 // XXX pedro: we will probably need to bump this.
 const (
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = 70015
+	ProtocolVersion uint32 = 70016
 
 	// MultipleAddressVersion is the protocol version which added multiple
 	// addresses per message (pver >= MultipleAddressVersion).
@@ -188,6 +188,9 @@ const (
 	// TestNet4 represents the test network (version 4).
 	TestNet4 BitcoinNet = 0xafdab7e2
 
+	// ChipNet represents the chip network.
+	ChipNet BitcoinNet = 0xafdab7e2
+
 	// SimNet represents the simulation test network.
 	SimNet BitcoinNet = 0x12141c16
 )
@@ -198,6 +201,7 @@ var bnStrings = map[BitcoinNet]string{
 	MainNet:  "MainNet",
 	TestNet:  "TestNet",
 	TestNet3: "TestNet3",
+	TestNet4: "TestNet4",
 	SimNet:   "SimNet",
 }
 

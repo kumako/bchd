@@ -110,7 +110,7 @@ func ExampleSignTxOutput() {
 		fmt.Println(err)
 		return
 	}
-	txOut := wire.NewTxOut(100000000, pkScript)
+	txOut := wire.NewTxOut(100000000, pkScript, wire.TokenData{})
 	originTx.AddTxOut(txOut)
 	originTxHash := originTx.TxHash()
 
@@ -126,11 +126,11 @@ func ExampleSignTxOutput() {
 
 	// Ordinarily this would contain that actual destination of the funds,
 	// but for this example don't bother.
-	txOut = wire.NewTxOut(0, nil)
+	txOut = wire.NewTxOut(0, nil, wire.TokenData{})
 	redeemTx.AddTxOut(txOut)
 
 	// Sign the redeeming transaction.
-	lookupKey := func(a bchutil.Address) (*bchec.PrivateKey, bool, error) {
+	lookupKey := func(_ bchutil.Address) (*bchec.PrivateKey, bool, error) {
 		// Ordinarily this function would involve looking up the private
 		// key for the provided address, but since the only thing being
 		// signed in this example uses the address associated with the

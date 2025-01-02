@@ -34,6 +34,8 @@ const (
 	// used by the Uahf hardfork.
 	SigHashForkID SigHashType = 0x40
 
+	SigHashUTXO SigHashType = 0x20
+
 	// sigHashMask defines the number of bits of the hash type which is used
 	// to identify which outputs are signed.
 	sigHashMask = 0x1f
@@ -64,6 +66,15 @@ func isScriptHash(pops []parsedOpcode) bool {
 		pops[2].opcode.value == OP_EQUAL
 }
 
+// isScriptHash32 returns true if the script passed is a pay-to-script-hash-32
+// transaction, false otherwise.
+func isScriptHash32(pops []parsedOpcode) bool {
+	return len(pops) == 3 &&
+		pops[0].opcode.value == OP_HASH256 &&
+		pops[1].opcode.value == OP_DATA_32 &&
+		pops[2].opcode.value == OP_EQUAL
+}
+
 // IsPayToScriptHash returns true if the script is in the standard
 // pay-to-script-hash (P2SH) format, false otherwise.
 func IsPayToScriptHash(script []byte) bool {
@@ -72,6 +83,16 @@ func IsPayToScriptHash(script []byte) bool {
 		return false
 	}
 	return isScriptHash(pops)
+}
+
+// IsPayToScriptHash32 returns true if the script is in the standard
+// pay-to-script-hash-32 (P2SH) format, false otherwise.
+func IsPayToScriptHash32(script []byte) bool {
+	pops, err := parseScript(script)
+	if err != nil {
+		return false
+	}
+	return isScriptHash32(pops)
 }
 
 // isPushOnly returns true if the script only pushes data, false otherwise.
@@ -261,7 +282,7 @@ func DisasmString(buf []byte) (string, error) {
 	return disbuf.String(), err
 }
 
-// removeOpcode will remove any opcode matching ``opcode'' from the opcode
+// removeOpcode will remove any opcode matching “opcode” from the opcode
 // stream in pkscript
 func removeOpcode(pkscript []parsedOpcode, opcode byte) []parsedOpcode {
 	retScript := make([]parsedOpcode, 0, len(pkscript))
@@ -335,6 +356,48 @@ func calcHashPrevOuts(tx *wire.MsgTx) chainhash.Hash {
 	return chainhash.DoubleHashH(b.Bytes())
 }
 
+func calcHashUtxos(tx *wire.MsgTx, utxoCache *UtxoCache) chainhash.Hash {
+	var b bytes.Buffer
+
+	for i := range tx.TxIn {
+		if utxoCache != nil {
+			utxo, err := utxoCache.GetEntry(i)
+			if err == nil {
+				wire.WriteTxOut(&b, 0, 0, &utxo)
+			} else {
+				log.Debugf("%v", err)
+			}
+		} else {
+			log.Debugf("utxoCache is nil.") // It might not be a bad idea to fail the function at this point.
+		}
+	}
+
+	if b.Len() > 0 {
+		return chainhash.DoubleHashH(b.Bytes())
+	}
+	return chainhash.Hash{}
+}
+
+func calUtxoTokenData(tx *wire.MsgTx, utxoCache *UtxoCache) [][]byte {
+	tokenDataList := make([][]byte, len(tx.TxIn))
+	for i := range tx.TxIn {
+		if utxoCache != nil {
+			utxo, err := utxoCache.GetEntry(i)
+			if err == nil {
+				if !utxo.TokenData.IsEmpty() {
+					b := utxo.TokenData.TokenDataBuffer()
+					tokenDataList[i] = b.Bytes()
+				}
+			} else {
+				log.Debugf("%v", err)
+			}
+		} else {
+			log.Debugf("utxoCache is nil.") // It might not be a bad idea to fail the function at this point.
+		}
+	}
+	return tokenDataList
+}
+
 // calcHashSequence computes an aggregated hash of each of the sequence numbers
 // within the inputs of the passed transaction. This single hash can be re-used
 // when validating all inputs spending outputs, which include signatures using
@@ -388,7 +451,7 @@ func calcSignatureHash(script []parsedOpcode, sigHashes *TxSigHashes, hType SigH
 	if !useBip143SigHashAlgo {
 		return calcLegacySignatureHash(script, hType, tx, idx)
 	}
-	return calcBip143SignatureHash(script, sigHashes, hType, tx, idx, amt)
+	return calcBip143SignatureHash(script, sigHashes, hType, tx, idx, amt, true)
 }
 
 // shallowCopyTx creates a shallow copy of the transaction for use when
@@ -532,7 +595,7 @@ func calcLegacySignatureHash(script []parsedOpcode, hashType SigHashType, tx *wi
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
 func calcBip143SignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
-	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
+	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64, scriptAllowCashTokens bool) ([]byte, error) {
 
 	// As a sanity check, ensure the passed input index for the transaction
 	// is valid.
@@ -562,6 +625,13 @@ func calcBip143SignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		sigHash.Write(zeroHash[:])
 	}
 
+	// add CashTokens data here hashUtxos is a 32-byte double SHA256
+	// of the serialization of all UTXOs spent by the transaction's inputs,
+	// concatenated in input order, excluding output count.
+	if scriptAllowCashTokens && hashType&SigHashUTXO > 0 {
+		sigHash.Write(sigHashes.HashUTXOS[:])
+	}
+
 	// If the sighash isn't anyone can pay, single, or none, the use the
 	// cached hash sequences, otherwise write all zeroes for the
 	// hashSequence.
@@ -578,6 +648,10 @@ func calcBip143SignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	var bIndex [4]byte
 	binary.LittleEndian.PutUint32(bIndex[:], tx.TxIn[idx].PreviousOutPoint.Index)
 	sigHash.Write(bIndex[:])
+
+	if len(sigHashes.tokenDataList) > 0 && len(sigHashes.tokenDataList[idx]) > 0 {
+		sigHash.Write(sigHashes.tokenDataList[idx])
+	}
 
 	scriptBytes, _ := unparseScript(subScript)
 

@@ -305,7 +305,7 @@ func createSpendingTx(sigScript, pkScript []byte,
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
 	txIn := wire.NewTxIn(outPoint, []byte{OP_0, OP_0})
-	txOut := wire.NewTxOut(outputValue, pkScript)
+	txOut := wire.NewTxOut(outputValue, pkScript, wire.TokenData{})
 	coinbaseTx.AddTxIn(txIn)
 	coinbaseTx.AddTxOut(txOut)
 
@@ -313,7 +313,7 @@ func createSpendingTx(sigScript, pkScript []byte,
 	coinbaseTxSha := coinbaseTx.TxHash()
 	outPoint = wire.NewOutPoint(&coinbaseTxSha, 0)
 	txIn = wire.NewTxIn(outPoint, sigScript)
-	txOut = wire.NewTxOut(outputValue, nil)
+	txOut = wire.NewTxOut(outputValue, nil, wire.TokenData{})
 
 	spendingTx.AddTxIn(txIn)
 	spendingTx.AddTxOut(txOut)
@@ -911,7 +911,7 @@ func TestCalcBip143SignatureHash(t *testing.T) {
 
 		sigHashes := NewTxSigHashes(&tx)
 		hash, err = calcBip143SignatureHash(parsedScript, sigHashes, hashType, &tx,
-			int(test[2].(float64)), 0)
+			int(test[2].(float64)), 0, false)
 		if err != nil {
 			t.Errorf("TestCalcBip143SignatureHash failed test #%d: "+
 				"calcLegacySignatureHash returned error: %v", i, err)

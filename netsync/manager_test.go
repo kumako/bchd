@@ -77,7 +77,7 @@ func (ctx *testContext) Setup(config *testConfig) error {
 		DB:                 db,
 		ChainParams:        ctx.cfg.chainParams,
 		TimeSource:         blockchain.NewMedianTime(),
-		ExcessiveBlockSize: 1000000,
+		ExcessiveBlockSize: 32000000,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create blockchain: %v", err)
@@ -766,6 +766,6 @@ func createSpendingTx(prevTx *bchutil.Tx, index uint32, scriptSig []byte, addres
 
 	spendTx := wire.NewMsgTx(1)
 	spendTx.AddTxIn(wire.NewTxIn(prevOutPoint, scriptSig))
-	spendTx.AddTxOut(wire.NewTxOut(prevOut.Value, scriptPubKey))
+	spendTx.AddTxOut(wire.NewTxOut(prevOut.Value, scriptPubKey, wire.TokenData{}))
 	return bchutil.NewTx(spendTx), nil
 }

@@ -83,7 +83,7 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee bchutil.Amoun
 // because the script engine already does this more accurately and concisely
 // via the txscript.ScriptVerifyCleanStack and txscript.ScriptVerifySigPushOnly
 // flags.
-func checkInputsStandard(tx *bchutil.Tx, utxoView *blockchain.UtxoViewpoint, scriptFlags txscript.ScriptFlags) error {
+func checkInputsStandard(tx *bchutil.Tx, utxoView *blockchain.UtxoViewpoint, _ txscript.ScriptFlags) error {
 	// NOTE: The reference implementation also does a coinbase check here,
 	// but coinbases have already been rejected prior to calling this
 	// function so no need to recheck.
@@ -233,7 +233,7 @@ func isDust(txOut *wire.TxOut, minRelayTxFee bchutil.Amount) bool {
 // so small it costs more to process them than they are worth).
 func checkTransactionStandard(tx *bchutil.Tx, height int32,
 	medianTimePast time.Time, minRelayTxFee bchutil.Amount,
-	maxTxVersion int32) error {
+	maxTxVersion int32, upgrade9Active bool) error {
 
 	// The transaction must be a currently supported version.
 	msgTx := tx.MsgTx()
@@ -288,6 +288,13 @@ func checkTransactionStandard(tx *bchutil.Tx, height int32,
 	// be "dust" (except when the script is a null data script).
 	dataCarrierSize := 0
 	for i, txOut := range msgTx.TxOut {
+
+		if !upgrade9Active && !txOut.TokenData.IsEmpty() {
+			rejectCode := wire.RejectNonstandard
+			str := "txn-tokens-before-activation"
+			return txRuleError(rejectCode, str)
+		}
+
 		scriptClass := txscript.GetScriptClass(txOut.PkScript)
 		err := checkPkScriptStandard(txOut.PkScript, scriptClass)
 		if err != nil {
@@ -321,4 +328,13 @@ func checkTransactionStandard(tx *bchutil.Tx, height int32,
 	}
 
 	return nil
+}
+
+func CheckTransactionStandard(tx *bchutil.Tx, height int32, medianTimePast time.Time, minRelayTxFee bchutil.Amount,
+	maxTxVersion int32, upgrade9Active bool) error {
+	return checkTransactionStandard(tx, height, medianTimePast, minRelayTxFee, maxTxVersion, upgrade9Active)
+}
+
+func CheckInputsStandard(tx *bchutil.Tx, utxoView *blockchain.UtxoViewpoint, scriptFlags txscript.ScriptFlags) error {
+	return checkInputsStandard(tx, utxoView, scriptFlags)
 }

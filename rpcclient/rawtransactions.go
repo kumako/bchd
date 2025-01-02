@@ -240,13 +240,14 @@ func (r FutureCreateRawTransactionResult) Receive() (*wire.MsgTx, error) {
 //
 // See CreateRawTransaction for the blocking version and more details.
 func (c *Client) CreateRawTransactionAsync(inputs []btcjson.TransactionInput,
-	amounts map[bchutil.Address]bchutil.Amount, lockTime *int64) FutureCreateRawTransactionResult {
+	amounts map[bchutil.Address]bchutil.Amount, cashTokens *[]btcjson.TransactionOutputCashToken,
+	lockTime *int64) FutureCreateRawTransactionResult {
 
 	convertedAmts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
 		convertedAmts[addr.String()] = amount.ToBCH()
 	}
-	cmd := btcjson.NewCreateRawTransactionCmd(inputs, convertedAmts, lockTime)
+	cmd := btcjson.NewCreateRawTransactionCmd(inputs, convertedAmts, cashTokens, lockTime)
 	return c.sendCmd(cmd)
 }
 
@@ -254,9 +255,10 @@ func (c *Client) CreateRawTransactionAsync(inputs []btcjson.TransactionInput,
 // and sending to the provided addresses. If the inputs are either nil or an
 // empty slice, it is interpreted as an empty slice.
 func (c *Client) CreateRawTransaction(inputs []btcjson.TransactionInput,
-	amounts map[bchutil.Address]bchutil.Amount, lockTime *int64) (*wire.MsgTx, error) {
+	amounts map[bchutil.Address]bchutil.Amount, cashTokens *[]btcjson.TransactionOutputCashToken,
+	lockTime *int64) (*wire.MsgTx, error) {
 
-	return c.CreateRawTransactionAsync(inputs, amounts, lockTime).Receive()
+	return c.CreateRawTransactionAsync(inputs, amounts, cashTokens, lockTime).Receive()
 }
 
 // FutureSendRawTransactionResult is a future promise to deliver the result
@@ -515,7 +517,7 @@ func (c *Client) SignRawTransaction4(tx *wire.MsgTx,
 }
 
 func (c *Client) SignRawTransaction5Async(tx *wire.MsgTx,
-	inputs []btcjson.RawTxInput, privKeysWIF []string) (*wire.MsgTx, bool, error) {
+	_ []btcjson.RawTxInput, privKeysWIF []string) (*wire.MsgTx, bool, error) {
 
 	txHex := ""
 	if tx != nil {
@@ -540,7 +542,7 @@ func (c *Client) SignRawTransactionWithKeyEntire(txHex string, privkeys []string
 	return c.SignRawTransactionWithKeyAsync(txHex, privkeys, prevtxs, sighashtype).Receive()
 }
 
-func (c *Client) SignRawTransactionWithKeyAsync(txHex string, privkeys []string, prevtxs interface{}, sighashtype string) FutureSignRawTransactionResult {
+func (c *Client) SignRawTransactionWithKeyAsync(txHex string, privkeys []string, _ interface{}, sighashtype string) FutureSignRawTransactionResult {
 	cmd := btcjson.NewSignRawTransactionWithKey("signrawtransactionwithkey", txHex, &privkeys, nil, &sighashtype)
 	return c.sendCmd(cmd)
 }

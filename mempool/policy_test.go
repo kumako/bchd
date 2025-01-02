@@ -190,7 +190,6 @@ func TestCheckPkScriptStandard(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TestCheckPkScriptStandard test '%s' "+
 				"failed: %v", test.name, err)
-			continue
 		}
 		scriptClass := txscript.GetScriptClass(script)
 		got := checkPkScriptStandard(script, scriptClass)
@@ -264,7 +263,6 @@ func TestDust(t *testing.T) {
 		if res != test.isDust {
 			t.Fatalf("Dust test '%s' failed: want %v got %v",
 				test.name, test.isDust, res)
-			continue
 		}
 	}
 }
@@ -647,7 +645,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 	for _, test := range tests {
 		// Ensure standardness is as expected.
 		err := checkTransactionStandard(bchutil.NewTx(&test.tx),
-			test.height, pastMedianTime, DefaultMinRelayTxFee, 1)
+			test.height, pastMedianTime, DefaultMinRelayTxFee, 1, false)
 		if err == nil && test.isStandard {
 			// Test passes since function returned standard for a
 			// transaction which is intended to be standard.

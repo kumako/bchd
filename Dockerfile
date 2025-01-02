@@ -1,6 +1,6 @@
 # Start from a Debian image with the latest version of Go installed
 # and a workspace (GOPATH) configured at /go.
-FROM golang:1.16
+FROM golang:1.23.4
 
 LABEL maintainer="Josh Ellithorpe <quest@mac.com>"
 
@@ -17,7 +17,9 @@ RUN go install ./cmd/bchctl
 # Symlink the config to /root/.bchd/bchd.conf
 # so bchctl requires fewer flags.
 RUN mkdir -p /root/.bchd
+RUN mkdir -p /root/.bchctl
 RUN ln -s /data/bchd.conf /root/.bchd/bchd.conf
+RUN ln -s /data/bchctl.conf /root/.bchctl/bchctl.conf
 
 # Create the data volume.
 VOLUME ["/data"]
